@@ -303,12 +303,7 @@
     const confirmModal = new bootstrap.Modal(confirmModalEl = document.getElementById("confirmModal"));
 
     async function mdFetch(url) {
-      return fetch(url, {
-        headers: {
-          "Accept": "application/json",
-          "User-Agent": "MyMangaTracker/1.0 (GitHub Pages)"
-        }
-      });
+      return fetch(url, { headers: { "Accept": "application/json" } });
     }
 
     function saveSearchHistory() {
@@ -520,7 +515,7 @@
         console.error(err);
         searchResults.innerHTML = `
       <div class="text-danger text-center">
-        Failed to load search results.
+        Failed to load search results...
       </div>
     `;
       }
