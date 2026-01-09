@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>My Manga Track</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      background: #0e0f11;
+      color: #e6e6e6;
+    }
+
+    .app-panel {
+      padding: 16px;
+    }
+
+    .card {
+      background: #15171a;
+      border: 1px solid #2a2d31;
+      border-radius: 12px;
+      height: 100%;
+    }
+
+    .cover {
+      height: 170px;
+      object-fit: contain;
+      padding: 10px;
+      width: 100%;
+    }
+
+    .card-title {
+      font-size: .95rem;
+      line-height: 1.2;
+      text-align: center;
+
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      /* number of lines */
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-height: calc(1.2em * 2);
+    }
+
+    .chapter-info {
+      font-size: .85rem;
+      text-align: center;
+      margin-bottom: .5rem;
+    }
+
+    .chapter-info strong {
+      color: #6ea8fe;
+    }
+
+    .modal {
+      --bs-modal-width: 700px;
+    }
+
+    .modal-content {
+      background: #15171a;
+      border: 1px solid #2a2d31;
+      border-radius: 14px;
+    }
+
+    .modal-header {
+      border-bottom: 1px solid #2a2d31;
+    }
+
+    .modal-footer {
+      border-top: 1px solid #2a2d31;
+    }
+
+    .dropdown-menu.scroll-menu {
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+    .btn.dropdown-toggle.w-100.text-start {
+      border: 1px solid #2a2d31;
+      background: #15171a;
+      color: var(--bs-btn-color);
+    }
+
+    .btn.dropdown-toggle.w-100.text-start:hover {
+      background: #1b1e22;
+      color: var(--bs-btn-color);
+    }
+
+    .dropdown-toggle::after {
+      display: none !important;
+    }
+
+    .card-remove-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      font-size: 14px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 5;
+    }
+
+    .card-remove-btn:hover {
+      background: rgba(220, 53, 69, 0.9);
+      /* bootstrap danger */
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container py-4">
+    <div class="app-panel">
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">📖 My Manga Track</h2>
+
+        <div class="d-flex gap-2">
+          <button class="btn btn-success btn-sm" onclick="updateAll()">
+            Update list
+          </button>
+          <button class="btn btn-primary btn-sm" id="openSearchBtn">
+            Search manga
+          </button>
+        </div>
+      </div>
+
+      <div id="myList" class="row g-3"></div>
+    </div>
+  </div>
+
+  <!-- SEARCH MODAL -->
+  <div class="modal fade" id="searchModal" tabindex="-1">
+    <div class="modal-dialog modal-md modal-dialog-scrollable">
+      <div class="modal-content">
+
+        <div class="modal-header">
+          <h5 class="modal-title">Search manga</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="input-group mb-3">
+            <input id="searchInput" class="form-control" placeholder="Search manga..." inputmode="search">
+            <button class="btn btn-primary" onclick="searchManga()">Search</button>
+          </div>
+
+          <div id="searchResults" class="row g-3 mb-3"></div>
+
+          <button id="loadMoreBtn" class="btn btn-primary w-100 d-none" onclick="loadMoreResults()">
+            Load more
+          </button>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD MODAL -->
+  <div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog modal-md modal-dialog">
+      <div class="modal-content">
+
+        <div class="modal-header">
+          <h5 class="modal-title">Add manga</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <img id="addCover" class="cover mb-2">
+          <h6 id="addTitle"></h6>
+
+          <label class="form-label mt-2">Status</label>
+          <div class="dropdown mb-2">
+            <button id="addStatusBtn" class="btn btn-outline-light btn-sm dropdown-toggle w-100 text-start"
+              type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              📖 Reading
+            </button>
+            <ul id="addStatusMenu" class="dropdown-menu scroll-menu w-100"></ul>
+          </div>
+
+          <label class="form-label">Last read chapter</label>
+          <div class="dropdown mb-3">
+            <button id="addChapterBtn" class="btn btn-outline-light btn-sm dropdown-toggle w-100 text-start"
+              type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Ch. 0
+            </button>
+            <ul id="addChapterMenu" class="dropdown-menu scroll-menu w-100"></ul>
+          </div>
+
+        </div>
+
+        <div class="modal-footer d-flex flex-column gap-2">
+          <button class="btn btn-success w-100" onclick="confirmAdd()">
+            Add
+          </button>
+
+          <button class="btn btn-secondary w-100" onclick="backToSearch()">
+            Back
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT MODAL -->
+  <div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-md modal-dialog">
+      <div class="modal-content">
+
+        <div class="modal-header">
+          <h5 class="modal-title" id="editTitle"></h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <label class="form-label">Status</label>
+          <div class="dropdown mb-3">
+            <button id="editStatusBtn" class="btn btn-outline-light btn-sm dropdown-toggle w-100 text-start"
+              type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              📖 Reading
+            </button>
+            <ul id="editStatusMenu" class="dropdown-menu scroll-menu w-100"></ul>
+          </div>
+
+          <label class="form-label">Current chapter</label>
+          <div class="dropdown">
+            <button id="editChapterBtn" class="btn btn-outline-light btn-sm dropdown-toggle w-100 text-start"
+              type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Ch. 0
+            </button>
+            <ul id="editChapterMenu" class="dropdown-menu scroll-menu w-100"></ul>
+          </div>
+
+
+        </div>
+
+        <div class="modal-footer d-flex gap-2">
+          <!-- <button class="btn btn-danger w-100" onclick="askRemove()">Remove</button> -->
+          <button class="btn btn-success w-100" onclick="saveEdit()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRM REMOVE -->
+  <div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-md modal-dialog">
+      <div class="modal-content">
+
+        <div class="modal-header">
+          <h5 class="modal-title">Remove manga</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body text-center">
+          Are you sure you want to remove this manga?
+        </div>
+
+        <div class="modal-footer d-flex gap-2">
+          <button class="btn btn-danger w-100" onclick="confirmRemove()">Remove</button>
+          <button class="btn btn-outline-light w-100" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    const API = "https://api.mangadex.org";
+
+    let myMangas = JSON.parse(localStorage.getItem("myMangas") || "[]");
+    let pendingAdd = null;
+    let editingIndex = null;
+    let searchCache = [];
+    let searchOffset = 0;
+    const SEARCH_PAGE_SIZE = 4;
+
+    const SEARCH_HISTORY_KEY = "searchHistory";
+    const MAX_SEARCH_HISTORY = 100;
+
+    let searchHistory = JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || "[]");
+
+    const searchModal = new bootstrap.Modal(searchModalEl = document.getElementById("searchModal"));
+    const addModal = new bootstrap.Modal(addModalEl = document.getElementById("addModal"));
+    const editModal = new bootstrap.Modal(editModalEl = document.getElementById("editModal"));
+    const confirmModal = new bootstrap.Modal(confirmModalEl = document.getElementById("confirmModal"));
+
+    function saveSearchHistory() {
+      localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(searchHistory));
+    }
+
+    function getCachedSearch(query) {
+      return searchHistory.find(s => s.query === query);
+    }
+
+    function addSearchToHistory(query, results) {
+      // remove existing same query (refresh it)
+      searchHistory = searchHistory.filter(s => s.query !== query);
+
+      // add to front
+      searchHistory.unshift({
+        query,
+        results,
+        time: Date.now()
+      });
+
+      // keep only last 10
+      if (searchHistory.length > MAX_SEARCH_HISTORY) {
+        searchHistory.length = MAX_SEARCH_HISTORY;
+      }
+
+      saveSearchHistory();
+    }
+
+    function save() {
+      localStorage.setItem("myMangas", JSON.stringify(myMangas));
+    }
+
+    function renderMyList() {
+      const el = document.getElementById("myList");
+      el.innerHTML = "";
+
+      myMangas.forEach((m, i) => {
+        el.innerHTML += `
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="card p-2 position-relative">
+
+          <!-- ❌ REMOVE BUTTON -->
+          <button class="card-remove-btn"
+            onclick="askRemoveFromCard(${i}); event.stopPropagation();">
+            ✕
+          </button>
+
+          <img src="${m.cover}" class="cover">
+          <h6 class="card-title">${m.title}</h6>
+
+          <div class="chapter-info">
+            📘 <strong>Ch. ${m.currentChapter}</strong> / ${m.latestChapter}
+          </div>
+
+          <button class="btn btn-outline-primary btn-sm w-100"
+            onclick="openEdit(${i})">
+            Edit
+          </button>
+        </div>
+      </div>
+    `;
+      });
+    }
+
+    const STATUS_OPTIONS = ["📖 Reading", "✅ Completed", "🚧 On Hold", "❌ Dropped", "📅 Plan to Read"];
+
+    function buildDropdown(menuEl, buttonEl, options, onSelect) {
+      const current = buttonEl.textContent.trim();
+
+      menuEl.innerHTML = options.map(opt => {
+        const active = opt === current ? "active" : "";
+        return `
+      <li>
+        <button class="dropdown-item ${active}" type="button" data-value="${opt}">
+          ${opt}
+        </button>
+      </li>
+    `;
+      }).join("");
+
+      menuEl.querySelectorAll("button.dropdown-item").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const value = btn.getAttribute("data-value");
+          buttonEl.textContent = value;
+
+          // refresh active highlight
+          menuEl.querySelectorAll(".dropdown-item").forEach(x => x.classList.remove("active"));
+          btn.classList.add("active");
+
+          onSelect?.(value);
+        });
+      });
+    }
+
+    function setDropdownValue(buttonEl, value) {
+      buttonEl.textContent = value;
+    }
+
+    function getDropdownValue(buttonEl) {
+      return buttonEl.textContent;
+    }
+
+    function openEdit(i) {
+      editingIndex = i;
+      const m = myMangas[i];
+
+      editTitle.textContent = m.title;
+
+      setDropdownValue(editStatusBtn, m.status);
+
+      buildDropdown(
+        editChapterMenu,
+        editChapterBtn,
+        Array.from({ length: m.latestChapter + 1 }, (_, c) => `Ch. ${c}`)
+      );
+      setDropdownValue(editChapterBtn, `Ch. ${m.currentChapter}`);
+
+      editModal.show();
+    }
+
+    function saveEdit() {
+      const m = myMangas[editingIndex];
+      m.status = getDropdownValue(editStatusBtn);
+      m.currentChapter = Number(getDropdownValue(editChapterBtn).replace("Ch. ", ""));
+      save();
+      renderMyList();
+      editModal.hide();
+    }
+
+    function askRemove() {
+      confirmModal.show();
+    }
+
+    function askRemoveFromCard(index) {
+      editingIndex = index;
+      confirmModal.show();
+    }
+
+    function confirmRemove() {
+      myMangas.splice(editingIndex, 1);
+      save();
+      renderMyList();
+      confirmModal.hide();
+      editModal.hide();
+    }
+
+    async function updateAll() {
+      for (const m of myMangas) {
+        const res = await fetch(`${API}/chapter?manga=${m.id}&limit=1&order[chapter]=desc`);
+        const data = await res.json();
+        m.latestChapter = Number(data.data[0]?.attributes.chapter || m.latestChapter);
+      }
+      save();
+      renderMyList();
+    }
+
+    document.getElementById("openSearchBtn").onclick = () => {
+      searchModal.show();
+    };
+
+    searchModalEl.addEventListener("shown.bs.modal", () => {
+      searchInput.focus();
+    });
+
+    buildDropdown(addStatusMenu, addStatusBtn, STATUS_OPTIONS);
+    buildDropdown(editStatusMenu, editStatusBtn, STATUS_OPTIONS);
+
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        searchManga();
+      }
+    });
+
+    async function searchManga() {
+      const q = searchInput.value.trim();
+      if (!q) return;
+
+      searchResults.innerHTML = "";
+      loadMoreBtn.classList.add("d-none");
+
+      searchOffset = 0;
+      searchCache = [];
+
+      // ✅ 1. Try cache first
+      const cached = getCachedSearch(q);
+      if (cached) {
+        searchCache = cached.results;
+        loadMoreResults();
+        return;
+      }
+
+      const res = await fetch(`${API}/manga?title=${encodeURIComponent(q)}&limit=20`);
+      const data = await res.json();
+
+      // reduce stored data (important)
+      searchCache = data.data.map(m => ({
+        id: m.id,
+        title: m.attributes.title.en || "No title",
+        cover: null // we fill it lazily
+      }));
+
+      addSearchToHistory(q, searchCache);
+      loadMoreResults();
+    }
+
+    async function loadMoreResults() {
+      const slice = searchCache.slice(searchOffset, searchOffset + SEARCH_PAGE_SIZE);
+      searchOffset += SEARCH_PAGE_SIZE;
+
+      for (const m of slice) {
+        const title = m.title;
+
+        let cover = m.cover;
+
+        if (!cover) {
+          const coverRes = await fetch(`${API}/cover?manga[]=${m.id}&limit=1`);
+          const coverData = await coverRes.json();
+          cover = coverData.data[0]
+            ? `https://uploads.mangadex.org/covers/${m.id}/${coverData.data[0].attributes.fileName}`
+            : "";
+
+          m.cover = cover;
+          saveSearchHistory();
+        }
+
+        searchResults.innerHTML += `
+      <div class="col-6 col-md-3">
+        <div class="card p-2">
+          <img src="${cover}" class="cover">
+          <h6 class="card-title">${title}</h6>
+
+          ${isInMyList(m.id)
+            ? `
+                <button class="btn btn-secondary btn-sm w-100" disabled>
+                  Already in list
+                </button>
+              `
+            : `
+                <button class="btn btn-success btn-sm w-100"
+                  onclick="beginAdd('${m.id}','${title}','${cover}')">
+                  Add
+                </button>
+              `
+          }
+        </div>
+      </div>
+    `;
+      }
+
+      if (searchOffset < searchCache.length) {
+        loadMoreBtn.classList.remove("d-none");
+      } else {
+        loadMoreBtn.classList.add("d-none");
+      }
+    }
+
+
+    async function beginAdd(id, title, cover) {
+      pendingAdd = { id, title, cover };
+
+      searchModal.hide();
+
+      // ✅ Show modal immediately
+      addCover.src = cover;
+      addTitle.textContent = title;
+
+      setDropdownValue(addStatusBtn, "📖 Reading");
+      setDropdownValue(addChapterBtn, "Loading…");
+
+      addChapterMenu.innerHTML = `
+    <li class="dropdown-item disabled text-muted">Loading chapters…</li>
+  `;
+
+      addModal.show();
+
+      // ⏳ Fetch chapters AFTER modal is visible
+      try {
+        const res = await fetch(`${API}/chapter?manga=${id}&limit=1&order[chapter]=desc`);
+        const data = await res.json();
+        const max = Number(data.data[0]?.attributes.chapter || 0);
+
+        pendingAdd.maxChapter = max;
+
+        buildDropdown(
+          addChapterMenu,
+          addChapterBtn,
+          Array.from({ length: max + 1 }, (_, i) => `Ch. ${i}`)
+        );
+
+        setDropdownValue(addChapterBtn, "Ch. 0");
+
+      } catch (e) {
+        addChapterMenu.innerHTML = `
+      <li class="dropdown-item disabled text-danger">Failed to load chapters</li>
+    `;
+      }
+    }
+
+
+    function confirmAdd() {
+      if (isInMyList(pendingAdd.id)) {
+        addModal.hide();
+        searchModal.show();
+        return;
+      }
+
+      myMangas.push({
+        ...pendingAdd,
+        status: getDropdownValue(addStatusBtn),
+        currentChapter: Number(getDropdownValue(addChapterBtn).replace("Ch. ", "")),
+        latestChapter: pendingAdd.maxChapter
+      });
+
+      save();
+      renderMyList();
+      addModal.hide();
+    }
+
+    function backToSearch() {
+      addModal.hide();
+      searchModal.show();
+    }
+
+    function isInMyList(mangaId) {
+      return myMangas.some(m => m.id === mangaId);
+    }
+
+    renderMyList();
+  </script>
+
+</body>
+
+</html>
