@@ -524,6 +524,12 @@
       }
     }
 
+    const CORS_PROXY = "https://corsproxy.io/?";
+
+    function proxyUrl(url) {
+      return CORS_PROXY + encodeURIComponent(url);
+    }
+
     async function loadMoreResults() {
       const slice = searchCache.slice(searchOffset, searchOffset + SEARCH_PAGE_SIZE);
       searchOffset += SEARCH_PAGE_SIZE;
@@ -536,9 +542,14 @@
         if (!cover) {
           const coverRes = await mdFetch(`${API}/cover?manga[]=${m.id}&limit=1`);
           const coverData = await coverRes.json();
-          cover = coverData.data[0]
-            ? `https://uploads.mangadex.org/covers/${m.id}/${coverData.data[0].attributes.fileName}`
-            : "";
+          if (coverData.data[0]) {
+            const rawCover =
+              `https://uploads.mangadex.org/covers/${m.id}/${coverData.data[0].attributes.fileName}`;
+
+            cover = proxyUrl(rawCover);
+          } else {
+            cover = "";
+          }
 
           m.cover = cover;
           saveSearchHistory();
