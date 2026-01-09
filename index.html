@@ -302,6 +302,15 @@
     const editModal = new bootstrap.Modal(editModalEl = document.getElementById("editModal"));
     const confirmModal = new bootstrap.Modal(confirmModalEl = document.getElementById("confirmModal"));
 
+    async function mdFetch(url) {
+      return fetch(url, {
+        headers: {
+          "Accept": "application/json",
+          "User-Agent": "MyMangaTracker/1.0 (GitHub Pages)"
+        }
+      });
+    }
+
     function saveSearchHistory() {
       localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(searchHistory));
     }
@@ -479,32 +488,42 @@
       const q = searchInput.value.trim();
       if (!q) return;
 
-      searchResults.innerHTML = "";
-      loadMoreBtn.classList.add("d-none");
+      try {
+        searchResults.innerHTML = "";
+        loadMoreBtn.classList.add("d-none");
 
-      searchOffset = 0;
-      searchCache = [];
+        searchOffset = 0;
+        searchCache = [];
 
-      // ✅ 1. Try cache first
-      const cached = getCachedSearch(q);
-      if (cached) {
-        searchCache = cached.results;
+        const cached = getCachedSearch(q);
+        if (cached) {
+          searchCache = cached.results;
+          loadMoreResults();
+          return;
+        }
+
+        const res = await mdFetch(`${API}/manga?title=${encodeURIComponent(q)}&limit=20`);
+        if (!res.ok) throw new Error("MangaDex request failed");
+
+        const data = await res.json();
+
+        searchCache = data.data.map(m => ({
+          id: m.id,
+          title: m.attributes.title.en || "No title",
+          cover: null
+        }));
+
+        addSearchToHistory(q, searchCache);
         loadMoreResults();
-        return;
+
+      } catch (err) {
+        console.error(err);
+        searchResults.innerHTML = `
+      <div class="text-danger text-center">
+        Failed to load search results.
+      </div>
+    `;
       }
-
-      const res = await fetch(`${API}/manga?title=${encodeURIComponent(q)}&limit=20`);
-      const data = await res.json();
-
-      // reduce stored data (important)
-      searchCache = data.data.map(m => ({
-        id: m.id,
-        title: m.attributes.title.en || "No title",
-        cover: null // we fill it lazily
-      }));
-
-      addSearchToHistory(q, searchCache);
-      loadMoreResults();
     }
 
     async function loadMoreResults() {
@@ -517,7 +536,7 @@
         let cover = m.cover;
 
         if (!cover) {
-          const coverRes = await fetch(`${API}/cover?manga[]=${m.id}&limit=1`);
+          const coverRes = await mdFetch(`${API}/cover?manga[]=${m.id}&limit=1`);
           const coverData = await coverRes.json();
           cover = coverData.data[0]
             ? `https://uploads.mangadex.org/covers/${m.id}/${coverData.data[0].attributes.fileName}`
@@ -579,7 +598,7 @@
 
       // ⏳ Fetch chapters AFTER modal is visible
       try {
-        const res = await fetch(`${API}/chapter?manga=${id}&limit=1&order[chapter]=desc`);
+        const res = await mdFetch(`${API}/chapter?manga=${id}&limit=1&order[chapter]=desc`);
         const data = await res.json();
         const max = Number(data.data[0]?.attributes.chapter || 0);
 
