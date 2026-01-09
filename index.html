@@ -128,7 +128,11 @@
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="mb-0">📖 My Manga Track</h2>
 
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-3">
+          <button class="btn btn-outline-danger btn-sm" onclick="clearSearchHistory()">
+            Clear search
+          </button>
+
           <button class="btn btn-success btn-sm" onclick="updateAll()">
             Update list
           </button>
@@ -280,6 +284,20 @@
     </div>
   </div>
 
+  <!-- TOAST -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="clearSearchToast" class="toast align-items-center text-bg-success border-0" role="alert"
+      aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body">
+          🧹 Search history cleared
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+          aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
@@ -334,6 +352,28 @@
       }
 
       saveSearchHistory();
+    }
+
+    function clearSearchHistory() {
+      // Clear memory
+      searchHistory = [];
+
+      // Clear localStorage
+      localStorage.removeItem(SEARCH_HISTORY_KEY);
+
+      // Reset UI state
+      searchCache = [];
+      searchOffset = 0;
+      searchResults.innerHTML = "";
+      loadMoreBtn.classList.add("d-none");
+
+      // Show toast
+      const toastEl = document.getElementById("clearSearchToast");
+      const toast = new bootstrap.Toast(toastEl, {
+        delay: 2500 // milliseconds
+      });
+
+      toast.show();
     }
 
     function save() {
