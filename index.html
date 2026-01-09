@@ -303,7 +303,10 @@
     const confirmModal = new bootstrap.Modal(confirmModalEl = document.getElementById("confirmModal"));
 
     async function mdFetch(url) {
-      return fetch(url, { headers: { "Accept": "application/json" } });
+      const proxiedUrl = "https://corsproxy.io/?" + encodeURIComponent(url);
+      return fetch(proxiedUrl, {
+        headers: { "Accept": "application/json" }
+      });
     }
 
     function saveSearchHistory() {
